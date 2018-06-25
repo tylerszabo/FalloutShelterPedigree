@@ -2,7 +2,7 @@ const { readFileSync, writeFileSync } = require('fs');
 const { spawn } = require('child_process');
 
 var dataFile = process.argv[2];
-var dotFile = "temp.dot.txt";
+var dotFile = "temp.gv";
 var pedigreeImageFile = "pedigree.png"
 
 if (!dataFile) {
@@ -123,18 +123,17 @@ for (var i in Object.keys(rankBy)) {
 }
 
 var nodes = "";
-nodes += "node [width=2 fixedsize=true];\n\n";
-nodes += "node [shape=square];\n";
+nodes += "node [shape=rectangle];\n";
 nodes += males.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n\n";
-nodes += "node [shape=circle];\n";
+nodes += "node [shape=oval];\n";
 nodes += females.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n\n";
 nodes += "node [width=.1 shape=point label=\"\"]; "
 nodes += relationships.map(x => `${x};`).join(" ");
 nodes += "\n";
 
-var graphvis = `digraph Pedigree {\n${ranks}\n${nodes}\n${edges.join("")}\n}`;
+var graphvis = `digraph Pedigree {\n\ngraph [ layout=dot ]\n\n${nodes}\n${ranks}\n${edges.join("")}\n}`;
 writeFileSync(dotFile, graphvis);
 spawn('dot', ["-Tpng", "-o"+pedigreeImageFile, dotFile]);
 
