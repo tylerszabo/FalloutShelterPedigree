@@ -4,6 +4,8 @@ const fs = require('fs');
 const { extname } = require('path');
 const { spawnSync } = require('child_process');
 
+const verbose = false;
+
 var dataFile = process.argv[2];
 var pedigreeImageFile = process.argv[3];
 
@@ -14,8 +16,14 @@ if (!dataFile) {
 var rawData = fs.readFileSync(dataFile, 'utf8');
 
 var saveGame = JSON.parse(rawData.trim());
+if (!saveGame) {
+  throw "Unable to read file";
+}
 
 var dwellers = saveGame.dwellers.dwellers;
+if (!dwellers) {
+  throw "Unable to find dwellers";
+}
 
 var dwellersById = {};
 
@@ -24,9 +32,14 @@ var females = [];
 var noparents = [];
 
 // first pass
-dwellers.forEach(d => {
+dwellers.forEach((d,i) => {
+  logVerbose(`Found ${getFullName(d)}`);
+
   // new properties
   d.id = d.serializeId;
+  if (!d.id) {
+    throw `No serializeId for dwellers[${i}] - ${getFullName(d)}`;
+  }
 
   d.children = [];
   d.grandchildren = [];
@@ -55,6 +68,8 @@ dwellers.forEach(d => {
 
   d.ascendants.filter(x=>(x)).forEach(x => x.descendants.push(d));
 
+  logVerbose(`Ascendants of ${getFullName(d)}: ${d.ascendants.map(getFullName).join(", ")}`);
+
   d.dad = d.ascendants[0];
   d.mom = d.ascendants[1];
 
@@ -72,6 +87,11 @@ dwellers.forEach(d => {
   d.grandparents = d.ascendants.splice(2, d.ascendants.length);
   d.grandparents.filter(x=>(x)).forEach(x => x.grandchildren.push(d));
 });
+
+if (dwellers.filter(hasRelationships).length === 0) {
+  console.log("No relationships");
+  return 1;
+}
 
 var generationsOfProgeny = {};
 function countGenerationsOfProgeny(dweller) {
@@ -167,11 +187,13 @@ if (fs.existsSync(pedigreeImageFile)) {
 }
 const dot = spawnSync('dot', ["-T"+extname(pedigreeImageFile).substring(1), "-o"+pedigreeImageFile], {input: graphvis});
 if (dot.status !== 0) {
+  console.log("Input:\n" + graphvis);
+
   throw `error in dot: ${dot.stderr}`
 }
 
 function hasRelationships(dweller) {
-  return dweller.children.length > 0 || dweller.mom || dweller.dad;
+  return dweller.ascendants.filter(x=>(x)).length > 0 || dweller.descendants.filter(x=>(x)).length > 0;
 }
 
 function getNode(dweller) {
@@ -183,5 +205,15 @@ function getId(dweller) {
 }
 
 function getFullName(dweller) {
-  return `${dweller.name} ${dweller.lastName}`;
+  if (dweller) {
+    return `${dweller.name} ${dweller.lastName}`;
+  } else {
+    return "-";
+  }
+}
+
+function logVerbose(input) {
+  if (verbose) {
+    console.log(input);
+  }
 }
