@@ -1,9 +1,11 @@
+'use strict';
+
 const fs = require('fs');
+const { extname } = require('path');
 const { spawnSync } = require('child_process');
 
 var dataFile = process.argv[2];
-var dotFile = "temp.gv";
-var pedigreeImageFile = "pedigree.png"
+var pedigreeImageFile = process.argv[3];
 
 if (!dataFile) {
   return -1;
@@ -160,15 +162,10 @@ nodes += " }\n";
 
 var graphvis = `digraph Pedigree {\n\ngraph [layout=dot ranksep=1 splines=splines overlap=false truecolor=true]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
 
-if (fs.existsSync(dotFile)) {
-  fs.unlinkSync(dotFile);
-}
-fs.writeFileSync(dotFile, graphvis);
-
 if (fs.existsSync(pedigreeImageFile)) {
   fs.unlinkSync(pedigreeImageFile);
 }
-const dot = spawnSync('dot', ["-Tpng", "-o"+pedigreeImageFile, dotFile]);
+const dot = spawnSync('dot', ["-T"+extname(pedigreeImageFile).substring(1), "-o"+pedigreeImageFile], {input: graphvis});
 if (dot.status !== 0) {
   throw `error in dot: ${dot.stderr}`
 }

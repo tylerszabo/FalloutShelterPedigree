@@ -1,4 +1,3 @@
 .*.swp
-Vault1.json
-pedigree.png
-temp.gv
+/Vault1.json
+*.png

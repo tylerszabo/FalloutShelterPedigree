@@ -10,7 +10,8 @@
             "name": "Launch Program",
             "program": "${workspaceFolder}/fallout.js",
             "args": [
-                "Vault1.json"
+                "Vault1.json",
+                "pedigree.png"
             ]
         }
     ]
