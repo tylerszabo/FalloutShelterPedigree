@@ -21,14 +21,22 @@ var males = [];
 var females = [];
 var noparents = [];
 
-for (var i = 0; i < dwellers.length; i++) {
-  var d = dwellers[i];
-  dwellersById[d.serializeId] = d;
-
+// first pass
+dwellers.forEach(d => {
   // new properties
+  d.id = d.serializeId;
+
   d.children = [];
+  d.grandchildren = [];
+  d.descendants = [];
+
+  d.ascendants = [];
   d.mom = null;
   d.dad = null;
+  d.grandparents = [];
+
+  // build databases
+  dwellersById[d.id] = d;
 
   if (d.gender === 1) {
     females.push(d);
@@ -37,22 +45,31 @@ for (var i = 0; i < dwellers.length; i++) {
   } else {
     throw `Unexpected gender ${d.gender}`
   }
-}
+});
 
-for (var i = 0; i < dwellers.length; i++) {
-  var d = dwellers[i];
-  d.dad = getDad(d);
-  d.mom = getMom(d);
+// 2nd pass
+dwellers.forEach(d => {
+  d.ascendants = d.relations.ascendants.map(x=>dwellersById[x] ? dwellersById[x] : null);
+
+  d.ascendants.filter(x=>(x)).forEach(x => x.descendants.push(d));
+
+  d.dad = d.ascendants[0];
+  d.mom = d.ascendants[1];
+
   if (d.dad) {
     d.dad.children.push(d);
   }
   if (d.mom) {
     d.mom.children.push(d);
   }
+
   if (!d.mom && !d.dad) {
     noparents.push(d);
   }
-}
+
+  d.grandparents = d.ascendants.splice(2, d.ascendants.length);
+  d.grandparents.filter(x=>(x)).forEach(x => x.grandchildren.push(d));
+});
 
 var generationsOfProgeny = {};
 function countGenerationsOfProgeny(dweller) {
@@ -81,59 +98,63 @@ function determineGeneration(dweller, currentGen) {
 noparents.map(x=>determineGeneration(x, 0));
 
 var dwellersByGeneration = {};
-for(var i = 0; i < dwellers.length; i++) {
-  var d = dwellers[i];
+dwellers.forEach(d => {
   var gen = d.generation;
 
   if (!dwellersByGeneration[gen]) { dwellersByGeneration[gen] = []; }
   dwellersByGeneration[gen].push(d);
-}
+});
 
-var relationships = {};
-var edges = {};
-for (var i = 0; i < dwellers.length; i++) {
-  var d = dwellers[i];
+dwellers = males.concat(females); // Males on the left
 
-  var child_id = getId(d);
-  var dad_id = getId(d.dad);
-  var mom_id = getId(d.mom);
+var relationships = new Set();
+var edges = new Set();
+dwellers.forEach(d => {
 
-  if (dad_id && mom_id) {
-    var relationship = `\"${dad_id}_${mom_id}\"`;
-    relationships[relationship] = true;
+  if (d.dad || d.mom) {
+    var relationship = `\"${d.dad.id}_${d.mom.id}\"`;
+    relationships.add(relationship);
 
-    edges[`${dad_id} -> ${relationship} [arrowhead=none];\n`] = true;
+    edges.add(`${relationship} -> ${d.id};\n`);
 
-    edges[`${mom_id} -> ${relationship} [arrowhead=none];\n`] = true;
-
-    edges[`${relationship} -> ${child_id} [penwidth=2];\n`] = true;
+    if (d.dad) {
+      edges.add(`${d.dad.id} -> ${relationship} [arrowhead=none];\n`);
+    }
+    if (d.mom) {
+      edges.add(`${d.mom.id} -> ${relationship} [arrowhead=none];\n`);
+    }
   }
-  else if (dad_id || mom_id) {
-    throw `Expected 2 parents. Dad=${dad_id} Mom=${mom_id}`
-  }
-}
 
-edges = Object.keys(edges);
-relationships = Object.keys(relationships);
+  // Relatives
+  d.ascendants.filter(x=>(x)).forEach(asc=>{
+    asc.descendants.filter(r=> r && r !== d && !d.descendants.includes(r) && !d.ascendants.includes(r)).forEach(r=>{
+      var min = Math.min(d.id, r.id);
+      var max = Math.max(d.id, r.id);
+      edges.add(`${min} -> ${max} [constraint=false color="#00000030" arrowhead=none];\n`);
+    });
+  });
+});
+edges = Array.from(edges);
+relationships = Array.from(relationships);
 
-var rankBy = generationsOfProgeny;
+var groupBy = generationsOfProgeny;
 var clusters = "// clusters\n";
-for (var i in Object.keys(rankBy)) {
-  clusters += `{ rank=same; ${rankBy[i].filter(hasRelationships).map(getId).join("; ")}; };\n`;
-}
+Object.keys(groupBy).forEach(groupName => {
+  clusters += `{ group=same; ${groupBy[groupName].filter(hasRelationships).map(getId).join("; ")}; };\n`;
+});
 
 var nodes = "";
-nodes += "{ // Males\nnode [shape=rectangle];\n";
+nodes += "{ // Males\nnode [shape=rectangle style=filled fillcolor=lightblue];\n";
 nodes += males.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n}\n\n";
-nodes += "{ // Females\nnode [shape=oval];\n";
+nodes += "{ // Females\nnode [shape=oval style=filled fillcolor=lightpink];\n";
 nodes += females.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n}\n\n";
-nodes += "{ node [width=.1 shape=point label=\"\"]; "
+nodes += "{ node [shape=point label=\"\"]; "
 nodes += relationships.map(x => `${x};`).join(" ");
 nodes += " }\n";
 
-var graphvis = `digraph Pedigree {\n\ngraph [ layout=dot splines=true overlap=false ]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
+var graphvis = `digraph Pedigree {\n\ngraph [layout=dot splines=splines overlap=false truecolor=true]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
 
 if (fs.existsSync(dotFile)) {
   fs.unlinkSync(dotFile);
@@ -162,17 +183,4 @@ function getId(dweller) {
 
 function getFullName(dweller) {
   return `${dweller.name} ${dweller.lastName}`;
-}
-
-function getAscendant(dweller, ascendant) {
-  var id = dweller.relations.ascendants[ascendant];
-  return dwellersById[id] ? dwellersById[id] : null;
-}
-
-function getDad(dweller) {
-  return getAscendant(dweller, 0);
-}
-
-function getMom(dweller) {
-  return getAscendant(dweller, 1);
 }
