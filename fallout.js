@@ -1,5 +1,5 @@
-const { readFileSync, writeFileSync } = require('fs');
-const { spawn } = require('child_process');
+const fs = require('fs');
+const { spawnSync } = require('child_process');
 
 var dataFile = process.argv[2];
 var dotFile = "temp.gv";
@@ -9,7 +9,7 @@ if (!dataFile) {
   return -1;
 }
 
-var rawData = readFileSync(dataFile, 'utf8');
+var rawData = fs.readFileSync(dataFile, 'utf8');
 
 var saveGame = JSON.parse(rawData.trim());
 
@@ -134,8 +134,19 @@ nodes += relationships.map(x => `${x};`).join(" ");
 nodes += "\n";
 
 var graphvis = `digraph Pedigree {\n\ngraph [ layout=dot ]\n\n${nodes}\n${ranks}\n${edges.join("")}\n}`;
-writeFileSync(dotFile, graphvis);
-spawn('dot', ["-Tpng", "-o"+pedigreeImageFile, dotFile]);
+
+if (fs.existsSync(dotFile)) {
+  fs.unlinkSync(dotFile);
+}
+fs.writeFileSync(dotFile, graphvis);
+
+if (fs.existsSync(pedigreeImageFile)) {
+  fs.unlinkSync(pedigreeImageFile);
+}
+const dot = spawnSync('dot', ["-Tpng", "-o"+pedigreeImageFile, dotFile]);
+if (dot.status !== 0) {
+  throw `error in dot: ${dot.stderr}`
+}
 
 function hasRelationships(dweller) {
   return dweller.children.length > 0 || dweller.mom || dweller.dad;
