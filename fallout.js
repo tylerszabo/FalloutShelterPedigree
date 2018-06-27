@@ -115,13 +115,15 @@ dwellers.forEach(d => {
     var relationship = `\"${d.dad.id}_${d.mom.id}\"`;
     relationships.add(relationship);
 
-    edges.add(`${relationship} -> ${d.id};\n`);
+    edges.add(`${relationship} -> ${d.id} [headport=n tailport=s];\n`);
 
     if (d.dad) {
-      edges.add(`${d.dad.id} -> ${relationship} [arrowhead=none];\n`);
+      edges.add(`${d.dad.id} -> ${relationship} [arrowhead=none headport=n];\n`);
+      edges.add(`${d.dad.id} -> ${relationship} [arrowhead=none style=invisible];\n`);
     }
     if (d.mom) {
-      edges.add(`${d.mom.id} -> ${relationship} [arrowhead=none];\n`);
+      edges.add(`${d.mom.id} -> ${relationship} [arrowhead=none headport=n];\n`);
+      edges.add(`${d.mom.id} -> ${relationship} [arrowhead=none style=invisible];\n`);
     }
   }
 
@@ -131,6 +133,8 @@ dwellers.forEach(d => {
       var min = Math.min(d.id, r.id);
       var max = Math.max(d.id, r.id);
       edges.add(`${min} -> ${max} [constraint=false color="#00000030" arrowhead=none];\n`);
+      edges.add(`${min} -> ${max} [constraint=false style=invisible arrowhead=none]; // 1\n`);
+      edges.add(`${min} -> ${max} [constraint=false style=invisible arrowhead=none]; // 2\n`);
     });
   });
 });
@@ -150,11 +154,11 @@ nodes += "\n}\n\n";
 nodes += "{ // Females\nnode [shape=oval style=filled fillcolor=lightpink];\n";
 nodes += females.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n}\n\n";
-nodes += "{ node [shape=point label=\"\"]; "
+nodes += "{ node [shape=point width=0.1 label=\"\"]; "
 nodes += relationships.map(x => `${x};`).join(" ");
 nodes += " }\n";
 
-var graphvis = `digraph Pedigree {\n\ngraph [layout=dot splines=splines overlap=false truecolor=true]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
+var graphvis = `digraph Pedigree {\n\ngraph [layout=dot ranksep=1 splines=splines overlap=false truecolor=true]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
 
 if (fs.existsSync(dotFile)) {
   fs.unlinkSync(dotFile);
