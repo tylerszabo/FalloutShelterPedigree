@@ -106,7 +106,7 @@ for (var i = 0; i < dwellers.length; i++) {
 
     edges[`${mom_id} -> ${relationship} [arrowhead=none];\n`] = true;
 
-    edges[`${relationship} -> ${child_id};\n`] = true;
+    edges[`${relationship} -> ${child_id} [penwidth=2];\n`] = true;
   }
   else if (dad_id || mom_id) {
     throw `Expected 2 parents. Dad=${dad_id} Mom=${mom_id}`
@@ -117,23 +117,23 @@ edges = Object.keys(edges);
 relationships = Object.keys(relationships);
 
 var rankBy = generationsOfProgeny;
-var ranks = "";
+var clusters = "// clusters\n";
 for (var i in Object.keys(rankBy)) {
-  ranks += `{rank=same; ${rankBy[i].filter(hasRelationships).map(getId).join("; ")}; };\n`;
+  clusters += `{ rank=same; ${rankBy[i].filter(hasRelationships).map(getId).join("; ")}; };\n`;
 }
 
 var nodes = "";
-nodes += "node [shape=rectangle];\n";
+nodes += "{ // Males\nnode [shape=rectangle];\n";
 nodes += males.filter(hasRelationships).map(getNode).join("\n");
-nodes += "\n\n";
-nodes += "node [shape=oval];\n";
+nodes += "\n}\n\n";
+nodes += "{ // Females\nnode [shape=oval];\n";
 nodes += females.filter(hasRelationships).map(getNode).join("\n");
-nodes += "\n\n";
-nodes += "node [width=.1 shape=point label=\"\"]; "
+nodes += "\n}\n\n";
+nodes += "{ node [width=.1 shape=point label=\"\"]; "
 nodes += relationships.map(x => `${x};`).join(" ");
-nodes += "\n";
+nodes += " }\n";
 
-var graphvis = `digraph Pedigree {\n\ngraph [ layout=dot ]\n\n${nodes}\n${ranks}\n${edges.join("")}\n}`;
+var graphvis = `digraph Pedigree {\n\ngraph [ layout=dot splines=true overlap=false ]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
 
 if (fs.existsSync(dotFile)) {
   fs.unlinkSync(dotFile);
