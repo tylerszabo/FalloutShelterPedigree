@@ -1,3 +1,6 @@
+/* jslint node: true */
+/* jshint esversion: 6 */
+
 'use strict';
 
 const fs = require('fs');
@@ -58,7 +61,7 @@ dwellers.forEach((d,i) => {
   } else if (d.gender === 2) {
     males.push(d);
   } else {
-    throw `Unexpected gender ${d.gender}`
+    throw `Unexpected gender ${d.gender}`;
   }
 });
 
@@ -102,7 +105,7 @@ function countGenerationsOfProgeny(dweller) {
       dweller.generationsOfProginy = 1 + Math.max(...dweller.children.map(countGenerationsOfProgeny));
     }
     if (!generationsOfProgeny[dweller.generationsOfProginy]) {
-      generationsOfProgeny[dweller.generationsOfProginy] = []
+      generationsOfProgeny[dweller.generationsOfProginy] = [];
     }
     generationsOfProgeny[dweller.generationsOfProginy].push(dweller);
   }
@@ -176,7 +179,7 @@ nodes += "\n}\n\n";
 nodes += "{ // Females\nnode [shape=oval style=filled fillcolor=lightpink];\n";
 nodes += females.filter(hasRelationships).map(getNode).join("\n");
 nodes += "\n}\n\n";
-nodes += "{ node [shape=point width=0.1 label=\"\"]; "
+nodes += "{ node [shape=point width=0.1 label=\"\"]; ";
 nodes += relationships.map(x => `${x};`).join(" ");
 nodes += " }\n";
 
@@ -189,7 +192,7 @@ const dot = spawnSync('dot', ["-T"+extname(pedigreeImageFile).substring(1), "-o"
 if (dot.status !== 0) {
   console.log("Input:\n" + graphvis);
 
-  throw `error in dot: ${dot.stderr}`
+  throw `error in dot: ${dot.stderr}`;
 }
 
 function hasRelationships(dweller) {
