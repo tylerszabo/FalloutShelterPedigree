@@ -7,7 +7,8 @@ const fs = require('fs');
 const { extname } = require('path');
 const { spawnSync } = require('child_process');
 
-const verbose = false;
+const verbose = true;
+const extraverbose = true;
 
 var dataFile = process.argv[2];
 var pedigreeImageFile = process.argv[3];
@@ -184,6 +185,11 @@ nodes += relationships.map(x => `${x};`).join(" ");
 nodes += " }\n";
 
 var graphvis = `digraph Pedigree {\n\ngraph [layout=dot ranksep=1 splines=splines overlap=false truecolor=true]\n\n${nodes}\n${clusters}\n${edges.join("")}\n}`;
+
+if (extraverbose)
+{
+  console.log(graphvis);
+}
 
 if (fs.existsSync(pedigreeImageFile)) {
   fs.unlinkSync(pedigreeImageFile);
